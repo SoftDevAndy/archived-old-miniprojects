@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ISS - Tracker</title>
+
+	<link rel="stylesheet" type="text/css" href="css/basic.css">
+	
+	<script src="js/jquery-3.2.1.min.js"></script>
+	<script src="js/mapstyle.js"></script> <!-- Gives access to the google maps style -->
+	<script src="js/token.js"></script> <!-- Gives access to the google map api token -->
+
+</head>
+<body>
+	
+	<script type="text/javascript">
+
+		var map;
+		var timer;
+		var marker;
+		var satellite;
+		var timeMax = 5;
+		var timeCount = 0;
+
+		// Build the callback script
+		// This bit of magic allows for dynamically using the google map api token from file
+
+		var url = "https://maps.googleapis.com/maps/api/js?key=" + googleMapApiToken + "&callback=initMap";
+		var callbackScript = document.createElement('script');
+		callbackScript.setAttribute('src', url);
+		document.head.appendChild(callbackScript);
+
+		/* Map logic */		
+
+		function initMap() {
+			map = new google.maps.Map(document.getElementById('map'),{
+			  center: {lat: -34.397, lng: 150.644},
+			  zoom: 3,
+			  styles: mapStyle // adds the google map styling from mapstyle.js
+			});
+
+			satellite = {
+				url: 'icon/sat.png',
+				size: new google.maps.Size(128, 128)
+        	};
+
+        	timer = setInterval(reloader, 1000);
+		}		
+
+		function reloader(){
+
+			timeCount++;
+
+			if(timeCount > timeMax){
+
+				timeCount = 0;
+
+				$.get("http://api.open-notify.org/iss-now.json", function(data){
+
+					// Once the api request is made, parse the co-ordinates
+					
+					var issLatLng = {lat: parseFloat(data.iss_position.latitude), lng: parseFloat(data.iss_position.longitude)};
+
+					if(marker){
+
+						// If the marker exists, just move it
+						marker.setPosition(issLatLng);
+					}
+					else
+					{
+						// Creates the marker the first time around
+						marker = new google.maps.Marker({
+				          position: issLatLng,
+				          map: map,
+				          icon: satellite,
+				          title: getTime()
+				        });
+					}		
+
+					// Center the map on the marker position
+					map.setCenter(marker.position);	
+				});
+			}
+
+			// Every second update the timer text
+			$("#reloadSpace").text("Time until reload " + ((timeMax - timeCount) + 1));
+		}
+
+		function getTime(){
+
+			// Just returns a variable with the current time
+			var dt = new Date();
+			return dt.getHours() + ":" + dt.getMinutes() + ":" + dt.getSeconds();
+		}
+
+	</script>
+	
+	<div id="reloadSpace">Time until reload</div>
+
+	<div id="map"></div>
+
+</body>
+</html>
